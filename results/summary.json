@@ -1,0 +1,22 @@
+{
+  "raw_rows": 2000,
+  "clean_rows": 1987,
+  "excluded_rows": 13,
+  "unique_customers": 155,
+  "date_from": "2022-01-01",
+  "date_to": "2023-12-31",
+  "total_sales": 908230.0,
+  "nulls_by_column": {
+    "transactions_id": 0,
+    "sale_date": 0,
+    "sale_time": 0,
+    "customer_id": 0,
+    "gender": 0,
+    "age": 10,
+    "category": 0,
+    "quantity": 3,
+    "price_per_unit": 3,
+    "cogs": 3,
+    "total_sale": 3
+  }
+}

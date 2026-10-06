@@ -1,200 +1,79 @@
--- SQL Retail Sales Analysis 1
-CREATE DATABASE SQL_Project_2
+-- Retail sales analysis | PostgreSQL | database: p1_retail_db
+-- Prerequisites: run setup.sql and import the CSV into retail_sales.
+-- All ten questions use the same complete-case view; the raw table is retained.
 
-DROP TABLE IF EXISTS retail_sales;
+-- Data-quality baseline: show how many rows are excluded, rather than deleting them.
+SELECT (SELECT COUNT(*) FROM retail_sales) AS raw_rows,
+       (SELECT COUNT(*) FROM retail_sales_clean) AS analysed_rows,
+       (SELECT COUNT(*) FROM retail_sales) -
+       (SELECT COUNT(*) FROM retail_sales_clean) AS excluded_rows;
 
--- Create Table
-CREATE TABLE retail_sales
-     (
-        transactions_id INT PRIMARY KEY,
-        sale_date DATE,	
-        sale_time TIME,	
-        customer_id	INT,
-        gender VARCHAR(15),	
-        age	INT,
-        category VARCHAR(15),	
-        quantity	INT,
-        price_per_unit FLOAT,	
-        cogs FLOAT,	
-        total_sale FLOAT
-     )
+SELECT COUNT(DISTINCT customer_id) AS unique_customers FROM retail_sales_clean;
+SELECT DISTINCT category FROM retail_sales_clean ORDER BY category;
 
-SELECT * FROM retail_sales
-LIMIT 10
+-- 1. Sales on 5 November 2022.
+SELECT * FROM retail_sales_clean WHERE sale_date = DATE '2022-11-05';
 
-SELECT COUNT(*) FROM retail_sales
+-- 2. Clothing transactions with 4 or more units in November 2022.
+SELECT * FROM retail_sales_clean
+WHERE category = 'Clothing'
+  AND sale_date >= DATE '2022-11-01'
+  AND sale_date < DATE '2022-12-01'
+  AND quantity >= 4;
 
--- DATA CLEANING
-
-SELECT * FROM retail_sales
-WHERE transactions_id IS NULL
-
-SELECT * FROM retail_sales
-WHERE sale_date IS NULL
-
-SELECT * FROM retail_sales
-WHERE sale_time IS NULL
-
-
-SELECT * FROM retail_sales
-WHERE 
-    transactions_id IS NULL
-	OR 
-	sale_date IS NULL
-	OR
-	sale_time IS NULL
-	OR
-	gender IS NULL
-	OR
-	category IS NULL
-	OR
-	quantity IS NULL
-	OR
-	cogs IS NULL
-	OR
-	total_sale IS NULL
-
---
-
-DELETE FROM retail_sales
-WHERE 
-    transactions_id IS NULL
-	OR 
-	sale_date IS NULL
-	OR
-	sale_time IS NULL
-	OR
-	gender IS NULL
-	OR
-	category IS NULL
-	OR
-	quantity IS NULL
-	OR
-	cogs IS NULL
-	OR
-	total_sale IS NULL
-
--- DATA EXPLORATION
-
---How many sales we have?
-Select COUNT(*) AS total_sale from retail_sales;
-
---How many unique customers we have?
-Select COUNT(DISTINCT customer_id) AS customer from retail_sales;
-
-Select DISTINCT category from retail_sales;
-
-
--- Data Analysis & Business Key Problems & Answers
-
--- My Analysis & Findings
--- Q.1 Write a SQL query to retrieve all columns for sales made on '2022-11-05
--- Q.2 Write a SQL query to retrieve all transactions where the category is 'Clothing' and the quantity sold is more than 4 in the month of Nov-2022
--- Q.3 Write a SQL query to calculate the total sales (total_sale) for each category.
--- Q.4 Write a SQL query to find the average age of customers who purchased items from the 'Beauty' category.
--- Q.5 Write a SQL query to find all transactions where the total_sale is greater than 1000.
--- Q.6 Write a SQL query to find the total number of transactions (transaction_id) made by each gender in each category.
--- Q.7 Write a SQL query to calculate the average sale for each month. Find out best selling month in each year
--- Q.8 Write a SQL query to find the top 5 customers based on the highest total sales 
--- Q.9 Write a SQL query to find the number of unique customers who purchased items from each category.
--- Q.10 Write a SQL query to create each shift and number of orders (Example Morning <=12, Afternoon Between 12 & 17, Evening >17)
-
-
-
--- Q.1 Write a SQL query to retrieve all columns for sales made on '2022-11-05
-Select *
-From retail_sales
-Where sale_date = '2022-11-05'
-
-
--- Q.2 Write a SQL query to retrieve all transactions where the category is 'Clothing' and the quantity sold is more than 4 in the month of Nov-2022
-Select *
-From retail_sales
-Where category = 'Clothing'
-     And 
-	 To_char(sale_date, 'YYYY-MM') = '2022-11'
-     And 
-	 quantity >= 4;
-
--- Q.3 Write a SQL query to calculate the total sales (total_sale) for each category.
-SELECT 
-    category,
-    SUM(total_sale) as net_sale,
-    COUNT(*) as total_orders
-FROM retail_sales
-GROUP BY 1	 
-
--- Q.4 Write a SQL query to find the average age of customers who purchased items from the 'Beauty' category.
-SELECT
-    ROUND(AVG(age), 2) as avg_age
-FROM retail_sales
-WHERE category = 'Beauty'
-
--- Q.5 Write a SQL query to find all transactions where the total_sale is greater than 1000.
-SELECT * FROM retail_sales
-WHERE total_sale > 1000
-
--- Q.6 Write a SQL query to find the total number of transactions (transaction_id) made by each gender in each category.
-SELECT 
-    category,
-    gender,
-    COUNT(*) as total_trans
-FROM retail_sales
-GROUP 
-    BY 
-    category,
-    gender
-ORDER BY 1
-
--- Q.7 Write a SQL query to calculate the average sale for each month. Find out best selling month in each year
-SELECT 
-       year,
-       month,
-    avg_sale
-FROM 
-(    
-SELECT 
-    EXTRACT(YEAR FROM sale_date) as year,
-    EXTRACT(MONTH FROM sale_date) as month,
-    AVG(total_sale) as avg_sale,
-    RANK() OVER(PARTITION BY EXTRACT(YEAR FROM sale_date) ORDER BY AVG(total_sale) DESC) as rank
-FROM retail_sales
-GROUP BY 1, 2
-) as t1
-WHERE rank = 1
-
--- Q.8 Write a SQL query to find the top 5 customers based on the highest total sales 
-SELECT 
-    customer_id,
-    SUM(total_sale) as total_sales
-FROM retail_sales
-GROUP BY 1
-ORDER BY 2 DESC
-LIMIT 5
-
--- Q.9 Write a SQL query to find the number of unique customers who purchased items from each category.
-SELECT 
-    category,    
-    COUNT(DISTINCT customer_id) as cnt_unique_cs
-FROM retail_sales
+-- 3. Total sales and transaction count by category.
+SELECT category, SUM(total_sale) AS total_sales, COUNT(*) AS total_orders
+FROM retail_sales_clean
 GROUP BY category
+ORDER BY total_sales DESC;
 
--- Q.10 Write a SQL query to create each shift and number of orders (Example Morning <=12, Afternoon Between 12 & 17, Evening >17)
-WITH hourly_sale
-AS
-(
-SELECT *,
-    CASE
-        WHEN EXTRACT(HOUR FROM sale_time) < 12 THEN 'Morning'
-        WHEN EXTRACT(HOUR FROM sale_time) BETWEEN 12 AND 17 THEN 'Afternoon'
-        ELSE 'Evening'
-    END as shift
-FROM retail_sales
+-- 4. Transaction-weighted average customer age for Beauty purchases.
+-- Repeat customers contribute once per qualifying transaction, not once per person.
+SELECT ROUND(AVG(age), 2) AS average_age
+FROM retail_sales_clean WHERE category = 'Beauty';
+
+-- 5. Transactions with a recorded sale amount above 1,000 source monetary units.
+SELECT * FROM retail_sales_clean WHERE total_sale > 1000;
+
+-- 6. Transaction counts by category and gender.
+SELECT category, gender, COUNT(*) AS total_transactions
+FROM retail_sales_clean
+GROUP BY category, gender
+ORDER BY category, gender;
+
+-- 7. Month with the highest average transaction value in each year (ties retained).
+WITH monthly_sales AS (
+    SELECT EXTRACT(YEAR FROM sale_date)::INTEGER AS year,
+           EXTRACT(MONTH FROM sale_date)::INTEGER AS month,
+           AVG(total_sale) AS average_sale
+    FROM retail_sales_clean
+    GROUP BY 1, 2
+), ranked_months AS (
+    SELECT *, RANK() OVER (PARTITION BY year ORDER BY average_sale DESC) AS position
+    FROM monthly_sales
 )
-SELECT 
-    shift,
-    COUNT(*) as total_orders    
-FROM hourly_sale
-GROUP BY shift
+SELECT year, month, ROUND(average_sale, 2) AS average_sale
+FROM ranked_months WHERE position = 1 ORDER BY year, month;
 
---End 
+-- 8. Top five customer IDs by aggregate sales; stable ordering breaks ties.
+SELECT customer_id, SUM(total_sale) AS total_sales
+FROM retail_sales_clean
+GROUP BY customer_id
+ORDER BY total_sales DESC, customer_id
+LIMIT 5;
+
+-- 9. Distinct customer IDs within each category (counts overlap across categories).
+SELECT category, COUNT(DISTINCT customer_id) AS unique_customers
+FROM retail_sales_clean GROUP BY category ORDER BY category;
+
+-- 10. Transaction counts by time band.
+-- Morning: before 12:00; Afternoon: 12:00–17:59; Evening: 18:00 onwards.
+WITH shifts AS (
+    SELECT CASE WHEN sale_time < TIME '12:00' THEN 'Morning'
+                WHEN sale_time < TIME '18:00' THEN 'Afternoon'
+                ELSE 'Evening' END AS shift
+    FROM retail_sales_clean
+)
+SELECT shift, COUNT(*) AS total_orders
+FROM shifts GROUP BY shift
+ORDER BY CASE shift WHEN 'Morning' THEN 1 WHEN 'Afternoon' THEN 2 ELSE 3 END;
