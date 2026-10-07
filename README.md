@@ -142,14 +142,9 @@ Full SQL: [sql_query_project.sql](sql_query_project.sql).
 
 The scripts do not create or switch databases automatically and do not delete source records.
 
-## Reproduce the published results independently
+## Supporting results
 
-```bash
-python -m pip install pandas
-python verify_results.py
-```
-
-[verify_results.py](verify_results.py) recomputes the README tables directly from the CSV and writes [results/](results/). The revised SQL was parsed with PostgreSQL's grammar via `pglast`; results were independently calculated with Python. A live PostgreSQL execution was not performed during this revision.
+The [results/](results/) folder contains reference tables and a data-quality summary. Reproduce the analysis by following the PostgreSQL / pgAdmin steps above. These reference figures were independently checked against the CSV during a documentation review; the revised SQL was syntax-checked but was not executed on a live PostgreSQL server during that review.
 
 ## Repository files
 
@@ -158,7 +153,6 @@ python verify_results.py
 | `setup.sql` | Table schema and complete-case view |
 | `sql_query_project.sql` | Quality baseline and ten analytical queries |
 | `SQL - Retail Sales Analysis_utf .csv` | Original source data |
-| `verify_results.py` | Independent result reproduction |
 | `results/` | CSV output tables and quality summary |
 
 ## Skills demonstrated
